@@ -1,0 +1,41 @@
+gitpodNamespace: null
+
+podMonitors:
+  - name: workspace
+    matchLabels:
+      component: workspace
+      workspaceType: regular
+    endpoints:
+      - port: supervisor
+        interval: 60s
+        scrapeTimeout: 5s
+        metricRelabelings:
+          - sourceLabels:
+              - '__name__'
+            regex: gitpod_(.*)
+            action: keep
+
+serviceMonitors:
+  - name: ws-manager
+    createService: true
+    services:
+      selector:
+        component: ws-manager
+      ports:
+        - name: metrics
+          port: 9500
+          targetPort: 9500
+          protocol: TCP
+    endpoints:
+      - port: metrics
+        interval: 30s
+        bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+prometheus:
+  enabled: true
+  grafana:
+    adminPassword: password
+    defaultDashboardsEnabled: true
+    sidecar:
+      dashboards:
+        enabled: true
