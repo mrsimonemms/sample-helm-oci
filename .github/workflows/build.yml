@@ -46,6 +46,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        id: gpg
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Convert GPG v2 key
+        run: |
+          gpg --export > ~/.gnupg/pubring.gpg
+          gpg --batch --pinentry-mode loopback --yes --passphrase '${{ secrets.GPG_PASSPHRASE }}' --export-secret-key > ~/.gnupg/secring.gpg
+
       - name: Publish Helm chart
         uses: mrsimonemms/helm-oci-chart-releaser@main
         with:
@@ -57,3 +69,9 @@ jobs:
           registry_username: ${{ github.actor }}
           registry_password: ${{ secrets.GITHUB_TOKEN }}
           update_dependencies: true
+          sign: true
+          signing_key: ${{ steps.gpg.outputs.name }}
+          signing_passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Verify chart
+        run: helm pull --verify --version 0.0.1-${{ github.sha }} oci://ghcr.io/mrsimonemms/sample-helm-oci/nginx-example
